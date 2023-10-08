@@ -1,0 +1,74 @@
+/*
+Copyright (C) Leeya310
+Program Name: LockSerial Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version #: 5.2, on 2023 / 04 / 10
+@credits: Most of this code (for the jSerial and connection is from James Smith!
+YouTube Video: https://www.youtube.com/watch?v=9pbsasv2izk
+
+@Program Description:  This class is for programming the house lock using the jSerial library
+and communicating with the Arduino IDE to recieve bluetooth communication from
+my phone.
+ */
+
+package eecs1021.major;
+
+import com.fazecast.jSerialComm.SerialPort;
+import java.util.Timer;
+import org.firmata4j.firmata.FirmataDevice;
+import java.io.IOException;
+
+/**
+ * This class programms the lock using jSerial to get bluetooth communications from the phone using
+ * the Arduino IDE
+ */
+public class LockSerial {
+
+    /**
+     * Main method for lock program, setting up device and serial port
+     * @param args
+     * @throws IOException
+     */
+    public static void main(String[] args) throws IOException {
+        long timeStart = System.currentTimeMillis();
+
+        //setting up serial prort
+        var sp = SerialPort.getCommPort("COM5");
+        sp.setComPortParameters(9600, Byte.SIZE, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
+        sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
+
+        //error handling for if the port doesn't open
+        var hasOpened = sp.openPort();
+        if (!hasOpened) {
+            throw new IllegalStateException("Failed to open serial port");
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            sp.closePort();
+        }));
+
+        FirmataDevice device = null;
+
+        //setting up board
+        try {
+            device = new FirmataDevice("COM5");
+            device.start();
+            device.ensureInitializationIsDone();
+        } catch (Exception ex) {
+            System.out.println("couldn't connect to board");
+        } finally {
+            System.out.println("Connected");
+
+            var timer = new Timer();
+            var timedSchedule = new LockDetect(timeStart);
+
+            sp.addDataListener(timedSchedule);
+
+            //setting up scheduled timer to listen for serial input
+            timer.schedule(timedSchedule, 0, 1000);
+        }
+    }
+}
