@@ -1,0 +1,89 @@
+/*
+Copyright (C) Leeya310
+Program Name: ThermostatAction Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version #: 5.2, on 2023 / 04 / 10
+@Program Description:  This class is for programming the thermostat and programming the timed
+task for the user to be able to change the thermostat value. Then, the program will inform
+the user whether it is too cold, to warm or the temperature is just right.
+ */
+
+package eecs1021.major;
+
+import org.firmata4j.Pin;
+import org.firmata4j.firmata.FirmataDevice;
+import org.firmata4j.ssd1306.SSD1306;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.TimerTask;
+
+/**
+ * This class is for programming the thermostat and it's timed task
+ */
+public class ThermostatAction extends TimerTask {
+    private static Pin moisturePin = null;
+    private static Pin ledState = null;
+    private static Pin buttonState = null;
+    private static Pin potState = null;
+    private static FirmataDevice device;
+    private static long state = 0;
+    private static float reallyWarm = 27;
+    private static float roomTemp = 20;
+    private static float reallyCold = 19;
+    private final SSD1306 theOledObject;
+    private static ArrayList<Long> tempSamples;
+
+    ThermostatAction(SSD1306 theOledObject, Pin moisture, Pin myLED, FirmataDevice device, Pin myButton, ArrayList<Long> tempSamples, Pin myPotentometer) {
+        this.moisturePin = moisture;
+        this.ledState = myLED;
+        this.theOledObject = theOledObject;
+        this.device = device;
+        this.buttonState = myButton;
+        this.tempSamples = tempSamples;
+        this.potState = myPotentometer;
+    }
+
+    @Override
+    public void run() {
+        state = potState.getValue();
+        var temperature = state / 31;
+        tempSamples.add(temperature);
+
+        //start event listener for button, to stop thermostat and freeze at current temperature
+        device.addEventListener(new Thermostop(ledState, potState, buttonState, tempSamples, reallyWarm, roomTemp, reallyCold));
+
+        theOledObject.getCanvas().clear();
+        theOledObject.getCanvas().drawString(0, 0, "Temp: " + temperature);
+        theOledObject.display();
+
+        System.out.println(buttonState.getValue());
+
+        //conditionals to check temperature and give advice whether too hot / cold or just right
+        if (temperature <= reallyCold || temperature >= reallyWarm) {
+            try {
+                ledState.setValue(1);
+            }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            if (temperature <= reallyCold) {
+                System.out.println("Temperature: " + (int)temperature + "\nToo cold! Increase temperature!\uD83D\uDE2D");
+            }
+            if (temperature >= reallyWarm) {
+                System.out.println("Temperature: " + (int)temperature + "\nToo warm! Decrease temperature!\uD83D\uDE2D");
+            }
+        }
+        else {
+            try {
+                ledState.setValue(0);
+            }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Temperature: " + (int)temperature + "\nPerfect temperature! \uD83D\uDE42");
+        }
+    }
+}
