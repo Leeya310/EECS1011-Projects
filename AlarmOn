@@ -1,0 +1,61 @@
+/*
+Copyright (C) Leeya310
+Program Name: AlarmOn Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version #: 5.2, on 2023 / 04 / 10
+@Program Description:  This class is for programming the alarm and turning the alarm on
+when the moisture sensor reading level is below 600 (for flood detection).
+ */
+
+package eecs1021.major;
+
+import org.firmata4j.Pin;
+import org.firmata4j.firmata.FirmataDevice;
+import org.firmata4j.ssd1306.SSD1306;
+
+import java.util.TimerTask;
+import jm.music.data.*;
+import jm.util.Play;
+import jm.constants.*;
+
+/**
+ * This class is for programming the alarm to turn on if the moisture level is low
+ */
+public class AlarmOn extends TimerTask {
+    private static Pin myButton = null;
+    private static Pin myMoisture = null;
+    private static FirmataDevice device;
+    private final SSD1306 theOledObject;
+
+    AlarmOn(Pin myButton, Pin myMoisture, SSD1306 theOledObject, FirmataDevice device) {
+        this.myButton = myButton;
+        this.myMoisture = myMoisture;
+        this.theOledObject = theOledObject;
+        this.device = device;
+    }
+
+    @Override
+    public void run() {
+
+        var moistureState = myMoisture.getValue();
+
+        //start event listener for button
+        device.addEventListener(new AlarmOff(myButton, myMoisture, theOledObject));
+
+        //set up the OLED
+        theOledObject.getCanvas().clear();
+        theOledObject.getCanvas().drawString(0, 0, "Moisture: " + moistureState);
+        theOledObject.display();
+
+        //conditionals to see if alarm should be turned on
+        while (moistureState <= 600) {
+            Play.midi(new Note(Pitches.E8, RhythmValues.TNT));
+            System.out.println("Alarm: on");
+            moistureState = myMoisture.getValue();
+        }
+        System.out.println("Alarm: off");
+    }
+}
