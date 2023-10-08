@@ -1,0 +1,62 @@
+/*
+Copyright (C) 2023 Leeya310
+Program Name: AlarmOff Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version 5.2, on 2023 / 04 / 10
+
+@Program Description:  This class is for programming the push button on the Grove Arduino board
+to enable the user to manually terminate the irrigation and display a graph of the data
+(number of samples vs. moisture voltage) on a graph.
+ */
+
+package eecs1021.major;
+
+import org.firmata4j.IODeviceEventListener;
+import org.firmata4j.IOEvent;
+import org.firmata4j.Pin;
+import org.firmata4j.firmata.FirmataDevice;
+import org.firmata4j.ssd1306.SSD1306;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+/**
+ * This class is the class where the listeners are programmed to program the button.
+ */
+public class AlarmOff extends Alarm implements IODeviceEventListener {
+    private final Pin buttonPin;
+    private final Pin motionPin;
+    private final SSD1306 theOledObject;
+
+    AlarmOff(Pin myMotion, Pin myButton, SSD1306 theOledObject) {
+        this.motionPin = myMotion;
+        this.buttonPin = myButton;
+        this.theOledObject = theOledObject;
+    }
+
+    @Override
+    public void onStart(IOEvent event) {
+    }
+
+    @Override
+    public void onStop(IOEvent event) {
+    }
+
+    @Override
+    public void onPinChange(IOEvent event) {
+        if (event.getPin().getIndex() != buttonPin.getIndex()) {
+            return;
+        }
+
+        //if the button is pressed, turn alarm off
+        if (buttonPin.getValue() == 1) {
+            task2.cancel();
+        }
+    }
+    @Override
+    public void onMessageReceive(IOEvent event, String message) {
+    }
+}
