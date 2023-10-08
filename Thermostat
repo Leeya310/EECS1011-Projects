@@ -1,0 +1,71 @@
+/*
+Copyright (C) Leeya310
+Program Name: Thermostat Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version #: 5.2, on 2023 / 04 / 10
+
+@Program Description: This class is for programming the thermostat and starting the Thermostat
+tasks.
+ */
+
+package eecs1021.major;
+
+import eecs1021.Practice.TimerScheduleHandler;
+import org.firmata4j.I2CDevice;
+import org.firmata4j.Pin;
+import org.firmata4j.firmata.FirmataDevice;
+import org.firmata4j.ssd1306.SSD1306;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Timer;
+
+/**
+ * Thermostat class for starting the thermostat tasks
+ */
+public class Thermostat {
+    static final int A1	= 15; //moisture sensor pin
+    static final int D6 = 6; //button pin
+    static final int A0 = 14; //potentiometer pin
+    static final int D4 = 4; //LED pin
+    static ThermostatAction task;
+    private static ArrayList<Long> tempSamples = new ArrayList<Long>();
+
+    /**
+     * Main method of program, to start thermostat tasks
+     * @param args
+     * @throws InterruptedException
+     * @throws IOException
+     */
+    public static void main(String[] args) throws InterruptedException, IOException {
+
+        FirmataDevice device = null;
+
+        //set up board and pins
+        try {
+            device = new FirmataDevice("COM5");
+            device.start();
+            device.ensureInitializationIsDone();
+        } catch (Exception ex) {
+            System.out.println("couldn't connect to board");
+        } finally {
+            System.out.println("Connected");
+            var myMoisture = device.getPin(A1);
+            var myPotentiometer = device.getPin(A0);
+            var myButton = device.getPin(D6);
+            var myLED = device.getPin(D4);
+            myButton.setMode(Pin.Mode.INPUT);
+
+            //start OLED
+            I2CDevice i2cObject = device.getI2CDevice((byte) 0x3C);
+            SSD1306 theOledObject = new SSD1306(i2cObject, SSD1306.Size.SSD1306_128_64);
+            theOledObject.init();
+
+            //start ThermostatAction task to get thermostat to work
+            task = new ThermostatAction(theOledObject, myMoisture, myLED, device, myButton, tempSamples, myPotentiometer);
+            new Timer().schedule(task, 0, 1000);
+        }
+    }
+}
