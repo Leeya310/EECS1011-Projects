@@ -1,0 +1,68 @@
+/*
+Copyright (C) Leeya310
+Program Name: Alarm Class
+Assignment Name: Major Project
+Instructor: James Smith
+Course Code: EECS 1021
+@author Leeya310
+@version #: 5.2, on 2023 / 04 / 10
+@Program Description:  This class is for setting up the components for the alarm and
+starting the timed task.
+ */
+
+package eecs1021.major;
+
+import org.firmata4j.I2CDevice;
+import org.firmata4j.Pin;
+import org.firmata4j.firmata.FirmataDevice;
+import org.firmata4j.ssd1306.SSD1306;
+
+import java.io.IOException;
+import java.util.Timer;
+
+/**
+ * Class that sets up the components for the alarm and starting the timed task
+ */
+public class Alarm {
+
+    static final int D5 = 5;
+    static final int D6 = 6;
+
+    static final int A1	= 15;
+    static AlarmOn task2;
+
+    /**
+     * Main method of program, to start the timed task for the alarm
+     *
+     * @param args
+     * @throws InterruptedException
+     * @throws IOException
+     */
+    public static void main(String[] args) throws InterruptedException, IOException {
+
+        FirmataDevice device = null;
+
+        //setting up the board and the pins
+        try {
+            device = new FirmataDevice("COM5");
+            device.start();
+            device.ensureInitializationIsDone();
+        } catch (Exception ex) {
+            System.out.println("couldn't connect to board");
+        } finally {
+            System.out.println("Connected");
+            var myAlarm = device.getPin(D5);
+            var myButton = device.getPin(D6);
+            var myMoisture = device.getPin(A1);
+            myButton.setMode(Pin.Mode.INPUT);
+
+            //setting up the OLED
+            I2CDevice i2cObject = device.getI2CDevice((byte) 0x3C);
+            SSD1306 theOledObject = new SSD1306(i2cObject, SSD1306.Size.SSD1306_128_64);
+            theOledObject.init();
+
+            task2 = new AlarmOn(myButton, myMoisture, theOledObject, device);
+            new Timer().schedule(task2, 0, 1000);
+        }
+    }
+}
