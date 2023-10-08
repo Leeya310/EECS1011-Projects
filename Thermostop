@@ -1,0 +1,115 @@
+/*
+Aleeya Irshad
+219360809
+EECS 1021
+Major Project - Thermostop Class
+James Smith
+2023 / 04 / 10
+Version 5.2
+
+Description:  This class is for programming the push button on the Grove Arduino board
+to enable the user to manually terminate the thermostat changing and get a sum of their temperature
+fluctuations to be able to monitor their money with using the thermostat better.
+ */
+
+package eecs1021.major;
+
+import edu.princeton.cs.introcs.StdDraw;
+import org.firmata4j.IODeviceEventListener;
+import org.firmata4j.IOEvent;
+import org.firmata4j.Pin;
+import java.io.IOException;
+import java.util.ArrayList;
+
+/**
+ * This class is the class where the listeners are programmed to program the button.
+ */
+public class Thermostop extends Thermostat implements IODeviceEventListener {
+    private final Pin potPin;
+    private final Pin buttonPin;
+    private final Pin ledPin;
+    private static float reallyWarm = 0;
+    private static float roomTemp = 0;
+    private static float reallyCold = 0;
+
+    private ArrayList<Long> tempSamples;
+
+    Thermostop(Pin ledState, Pin potState, Pin buttonState, ArrayList<Long> tempSamples, float reallyWarm, float roomTemp, float reallyCold) {
+        this.buttonPin = buttonState;
+        this.ledPin = ledState;
+        this.potPin = potState;
+        this.tempSamples = tempSamples;
+        this.reallyWarm = reallyWarm;
+        this.reallyCold = reallyCold;
+        this.roomTemp = roomTemp;
+    }
+
+    @Override
+    public void onStart(IOEvent event) {
+    }
+
+    @Override
+    public void onStop(IOEvent event) {
+    }
+
+    @Override
+    public void onPinChange(IOEvent event) {
+        if (event.getPin().getIndex() != buttonPin.getIndex()) {
+            return;
+        }
+
+        //if the button is pressed, stop the thermostat at the current value
+        if (buttonPin.getValue() == 1) {
+            task.cancel();
+            try {
+                ledPin.setValue(0);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            //graph set up
+            StdDraw.setXscale(0, tempSamples.size());
+            StdDraw.setYscale(0, 35);
+
+            //pen parameters
+            StdDraw.setPenRadius(0.005);
+            StdDraw.setPenColor(StdDraw.BLACK);
+
+            //axes
+            StdDraw.line(1,0,1,35);
+            StdDraw.line(1,0,100,0);
+
+            //labels
+            StdDraw.text(17, -0.8, "Number of Samples");
+            StdDraw.text(-0.4, 16, "[T]");
+            StdDraw.text(-0.4, 0, "0");
+            StdDraw.text(-0.4, 5, "5");
+            StdDraw.text(-0.4, 10, "10");
+            StdDraw.text(-0.4, 15, "15");
+            StdDraw.text(-0.4, 20, "20");
+            StdDraw.text(-0.4, 25, "25");
+            StdDraw.text(-0.4, 30, "30");
+            StdDraw.text(-0.4, 35, "35");
+
+            //plot points
+            for (int i = 1; i < tempSamples.size(); i++) {
+                if (tempSamples.get(i) <= reallyCold) {
+                    StdDraw.setPenColor(StdDraw.BLUE);
+                    StdDraw.text((double)i,(double)(tempSamples.get(Math.toIntExact(i))), "*");
+                }
+                if (tempSamples.get(i) >= reallyWarm) {
+                    StdDraw.setPenColor(StdDraw.RED);
+                    StdDraw.text((double)i,(double)(tempSamples.get(Math.toIntExact(i))), "*");
+                }
+                if (tempSamples.get(i) < reallyWarm && tempSamples.get(i) > reallyCold) {
+                    StdDraw.setPenColor(StdDraw.GREEN);
+                    StdDraw.text((double)i,(double)(tempSamples.get(Math.toIntExact(i))), "*");
+                }
+
+            }
+        }
+    }
+    @Override
+    public void onMessageReceive(IOEvent event, String message) {
+    }
+}
